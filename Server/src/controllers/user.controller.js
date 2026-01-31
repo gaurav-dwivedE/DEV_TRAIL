@@ -48,8 +48,8 @@ const login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+    const isValid = await bcrypt.compare(password, user.password);
 
-    const isValid =  bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({
         message: "Invalid email or password",
@@ -81,6 +81,9 @@ const profile = async (req, res) => {
    try {
       const userId = req.params.userId; 
       const user = await userModel.findById(userId).select('-password');
+      if(!user){
+        return  res.status(404).json({ message: "User not found" });
+      }
       res.status(200).json({ user });
     }
     catch (error) {
@@ -94,11 +97,11 @@ const profile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const userId = '697b5319d4c2bc5f718218d9';
-        const updates = req.body;
+        const { email, name } = req.body || {};
 
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            updates,
+            { email, name },
             { new: true }
         ).select('-password');
 
