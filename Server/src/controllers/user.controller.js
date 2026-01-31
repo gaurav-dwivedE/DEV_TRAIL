@@ -113,4 +113,6 @@ const updateProfile = async (req, res) => {
     }
 }
 
+
+
 export default { register, login, profile, updateProfile };
