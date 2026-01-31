@@ -42,7 +42,7 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
-    const user = await userModel.findOne({email}).select("-password");
+ const user = await userModel.findOne({email}).lean();
     if (!user) {
       return res.status(401).json({
         message: "Invalid email or password",
@@ -55,6 +55,7 @@ const login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+    const { password: _, ...userWithoutPass } = user;
 
     const token = jwt.sign(
       {
@@ -66,10 +67,10 @@ const login = async (req, res) => {
     );
 
     res.status(200).json({
-      token,
-      user,
+        token,
+      user: userWithoutPass,
     });
-  } catch (error) {
+   } catch (error) {
     res.status(500).json({
       error: error.message,
     });
