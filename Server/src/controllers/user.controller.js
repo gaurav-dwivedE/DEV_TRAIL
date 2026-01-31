@@ -49,7 +49,7 @@ const login = async (req, res) => {
       });
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid =  bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({
         message: "Invalid email or password",
@@ -77,4 +77,37 @@ const login = async (req, res) => {
   }
 };
 
-export default { register, login };
+const profile = async (req, res) => {
+   try {
+      const userId = req.params.userId; 
+      const user = await userModel.findById(userId).select('-password');
+      res.status(200).json({ user });
+    }
+    catch (error) {
+      res.status(500).json({
+        error: error.message,
+      });
+    }
+
+}
+
+const updateProfile = async (req, res) => {
+    try {
+        const userId = '697b5319d4c2bc5f718218d9';
+        const updates = req.body;
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            updates,
+            { new: true }
+        ).select('-password');
+
+        res.status(200).json({ user: updatedUser });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message,
+        });
+    }
+}
+
+export default { register, login, profile, updateProfile };
