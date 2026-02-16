@@ -9,8 +9,8 @@ const createLog = async (req, res) => {
 
   try {
 
-    const userId = "697b5319d4c2bc5f718218d9"; // Replace with logged-in user ID
-    const { title, description } = req.body || {};
+    const userId = req.user._id; // Replace with logged-in user ID
+    const { title, description, isPrivate } = req.body || {};
 
     const log = await logModel.create(
       [
@@ -18,12 +18,13 @@ const createLog = async (req, res) => {
           user: userId,
           title,
           description,
+          isPrivate
         },
       ],
       { session }
     );
 
-    console.log(log);
+
     
    
     await pointsModel.create(
@@ -59,7 +60,7 @@ const createLog = async (req, res) => {
     res.status(500).json({
       error: error.message,
     });
-    console.log(error.message);
+ 
     
   }
 };
@@ -95,8 +96,8 @@ const getPublicLogs = async (req, res) => {
 
 const getLogById = async (req,res) =>{
     try {
-        const userId = "697b5319d4c2bc5f718228d9" // Logged in user id
-
+        const userId = req.user._id // Logged in user id
+        
         const logId = req.params.logId
         let log = await logModel.findById(logId).populate({
             path: "user",
@@ -133,26 +134,28 @@ const getLogById = async (req,res) =>{
 
 const getUsersLogs = async (req,res) =>{
     try {
+         const id = req.user._id
         const userId = req.params.userId 
-        let logs = await logModel.find({user: userId}).populate({
-            path: "user",
-            select: "-password -__v -createdAt -updatedAt"
-        })
+        const query = {user: userId, isPrivate: false}
+        
+        if(id === userId){
+          delete(query.isPrivate)
+        }
 
+        let logs = await logModel.find(query)
+        .populate({
+          path: "user",
+          select: "-password -__v -createdAt -updatedAt"
+        })
+        .sort({createdAt: -1})
+        
         if(!logs.length){
             return res.status(404).json({
-                message:"Log not found"
+                message:"Logs not found",
+                logs
             })
         }
         
-        if(logs.isPrivate){
-            if(logs.user._id.toString() !== userId){
-            return res.status(403).json({
-                message:"Access denied"
-            })  
-            }
-        }
-
         res.status(200).json({
             message:"Log retrieved successfully",
             logs
@@ -169,7 +172,7 @@ const getUsersLogs = async (req,res) =>{
 
 const updateIsPrivate = async (req, res) => {
   try {
-    const userId = "697b5319d4c2bc5f718218d9"; // logged-in user
+    const userId = req.user._id; // logged-in user
     const { logId } = req.params;
     const { isPrivate } = req.body;
 
@@ -208,7 +211,7 @@ const updateIsPrivate = async (req, res) => {
 
 const updateLog = async (req, res) => {
   try {
-    const userId = "697b5319d4c2bc5f718218d9"; // logged-in user
+    const userId = req.user._id; // logged-in user
     const { logId } = req.params;
     const { title, description } = req.body || {};
 
@@ -249,15 +252,15 @@ const deleteLog = async (req, res) => {
 
   try {
     
-    const userId = "697b5319d4c2bc5f718218d9";
-    const { logId } = req.params;
+    const userId = req.user._id; // logged-in user
+    const  logId  = req.params.logId;
 
     const log = await logModel.findOneAndDelete({
       _id: logId,
       user: userId
     }, { session });
 
-    console.log(log);
+  
     
     if (!log) {
       return res.status(404).json({

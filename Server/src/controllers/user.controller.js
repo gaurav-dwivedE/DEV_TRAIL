@@ -23,14 +23,26 @@ const register = async (req, res) => {
 
     const token = jwt.sign(
       {
-        id: user._id,
+        _id: user._id,
         email: user.email,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" },
     );
 
-    res.status(201).json({ token, user: userWithoutPass, token });
+  res
+  .cookie("token", token, {
+    httpOnly: true,        // JS se access nahi hoga (secure)
+    secure: process.env.NODE_ENV === "production", // HTTPS only in prod
+    sameSite: "lax",    // CSRF protection
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  })
+  .status(201)
+  .json({
+    success: true,
+    user: userWithoutPass
+  });
+
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -59,17 +71,25 @@ const login = async (req, res) => {
 
     const token = jwt.sign(
       {
-        id: user._id,
+        _id: user._id,
         email: user.email,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" },
     );
 
-    res.status(200).json({
-        token,
-      user: userWithoutPass,
-    });
+    res
+  .cookie("token", token, {
+    httpOnly: true,        // JS se access nahi hoga (secure)
+    secure: process.env.NODE_ENV === "production", // HTTPS only in prod
+    sameSite: "lax",    // CSRF protection
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  })
+  .status(200)
+  .json({
+    success: true,
+    user: userWithoutPass
+  });
    } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -113,4 +133,49 @@ const updateProfile = async (req, res) => {
     }
 }
 
-export default { register, login, profile, updateProfile };
+const getme = async (req, res) => {
+  try {
+    const userId = req.user._id
+    console.log(userId);
+    
+    const user = await userModel.findById(userId).select("-password")
+    if(!user){
+      return res.status(404).json({
+        message: "User not found"
+      })
+    }
+    res.status(200).json({
+      message: "user fetched",
+      user
+    })
+  } catch (error) {
+    console.log(error);
+    
+    res.status(500).json({
+      error: error.message
+    })
+  }
+}
+
+const logout = (req, res) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed",
+    });
+  }
+};
+
+export default { register, login, profile, updateProfile, getme, logout };
